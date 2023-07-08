@@ -91,6 +91,7 @@ func checkProxy(proxyAddr string, proxyTimeout time.Duration) {
 func addProxyToList(proxyAddr string, proxyType string) {
 	// Ensure only 1 access at a time
 	mutex.Lock()
+	numProxies++
 	writeToFile(definedOutput+".txt", proxyAddr)
 	writeToFile(definedOutput+"_"+proxyType+".txt", proxyAddr)
 	mutex.Unlock()
