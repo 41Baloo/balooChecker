@@ -12,7 +12,11 @@ import (
 
 // Returns true if response is correct
 func ValidateResponse(resp []byte) bool {
-	return (string(resp)[41:55] == "Example Domain")
+	strResp := string(resp)
+	if len(strResp) < 60 {
+		return false
+	}
+	return (strResp[41:55] == "Example Domain")
 }
 
 func sendRequest(client *http.Client) ([]byte, error) {
