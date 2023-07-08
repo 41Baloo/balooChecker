@@ -36,7 +36,7 @@ func main() {
 	definedTimout = time.Duration(tTimeout) * time.Second
 	definedOutput = os.Args[2]
 
-	writeToFile(definedOutput, "[ Output ]: "+time.Now().Format("15:04:05"))
+	writeToFile(definedOutput+".txt", "[ Output ]: "+time.Now().Format("15:04:05"))
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
@@ -67,6 +67,14 @@ func checkProxy(proxyAddr string, proxyTimeout time.Duration) {
 		if proxy.ValidateResponse(respSOCKS5) {
 			fmt.Println("[ Found ]: " + proxyAddr + " ( SOCKS5 )")
 			addProxyToList(proxyAddr, proxy.PROXY_SOCKS5)
+		}
+	}
+
+	respSOCKS4, errSOCKS4 := proxy.ConnectSOCKS4(proxyAddr, proxyTimeout)
+	if errSOCKS4 == nil {
+		if proxy.ValidateResponse(respSOCKS4) {
+			fmt.Println("[ Found ]: " + proxyAddr + " ( SOCKS4 )")
+			addProxyToList(proxyAddr, proxy.PROXY_SOCKS4)
 		}
 	}
 

@@ -6,11 +6,28 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	"h12.io/socks"
 )
 
 // Returns true if response is correct
 func ValidateResponse(resp []byte) bool {
 	return (string(resp)[41:55] == "Example Domain")
+}
+
+func sendRequest(client *http.Client) ([]byte, error) {
+	response, err := client.Get("https://example.com/")
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return body, nil
 }
 
 func ConnectHTTP(proxy string, timeout time.Duration) ([]byte, error) {
@@ -29,18 +46,7 @@ func ConnectHTTP(proxy string, timeout time.Duration) ([]byte, error) {
 		Timeout: timeout,
 	}
 
-	response, err := client.Get("https://example.com/")
-	if err != nil {
-		return nil, err
-	}
-	defer response.Body.Close()
-
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	return body, nil
+	return sendRequest(client)
 }
 
 func ConnectHTTPS(proxy string, timeout time.Duration) ([]byte, error) {
@@ -59,18 +65,23 @@ func ConnectHTTPS(proxy string, timeout time.Duration) ([]byte, error) {
 		Timeout: timeout,
 	}
 
-	response, err := client.Get("https://example.com/")
-	if err != nil {
-		return nil, err
-	}
-	defer response.Body.Close()
+	return sendRequest(client)
 
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		return nil, err
+}
+
+func ConnectSOCKS4(proxy string, timeout time.Duration) ([]byte, error) {
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			Dial: socks.Dial("socks4://" + proxy),
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+		Timeout: timeout,
 	}
 
-	return body, nil
+	return sendRequest(client)
 }
 
 func ConnectSOCKS5(proxy string, timeout time.Duration) ([]byte, error) {
@@ -89,16 +100,5 @@ func ConnectSOCKS5(proxy string, timeout time.Duration) ([]byte, error) {
 		Timeout: timeout,
 	}
 
-	response, err := client.Get("https://example.com/")
-	if err != nil {
-		return nil, err
-	}
-	defer response.Body.Close()
-
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	return body, nil
+	return sendRequest(client)
 }
