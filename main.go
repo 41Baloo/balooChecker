@@ -5,27 +5,32 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"runtime"
 	"strconv"
 	"sync"
 	"time"
 )
 
 var (
+	sem           chan struct{}
 	mutex         sync.Mutex
 	numProxies    int
 	definedTimout time.Duration
 	definedOutput string
 )
 
-// Usage ./main [timeout] [threads]
+// Usage ./main [timeout] [output] [threads]
 func main() {
 
 	sArgs := os.Args
 
-	if len(sArgs) < 3 {
-		fmt.Println("[ Usage ]: ./main [proxy timeout] [output file]")
+	if len(sArgs) < 4 {
+		fmt.Println("[ Usage ]: ./main [proxy timeout] [output file] [max threads]")
 		os.Exit(0)
 	}
+
+	// Debug
+	//go countRoutines()
 
 	tTimeout, timeoutErr := strconv.Atoi(sArgs[1])
 	if timeoutErr != nil {
@@ -36,12 +41,23 @@ func main() {
 	definedTimout = time.Duration(tTimeout) * time.Second
 	definedOutput = os.Args[2]
 
+	tMaxThreads, threadsErr := strconv.Atoi(sArgs[3])
+	if threadsErr != nil {
+		fmt.Println("[ Error ]: " + threadsErr.Error())
+		os.Exit(0)
+	}
+	sem = make(chan struct{}, tMaxThreads)
+
 	writeToFile(definedOutput+".txt", "[ Output ]: "+time.Now().Format("15:04:05"))
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		proxyAddr := scanner.Text()
-		go checkProxy(proxyAddr, definedTimout)
+		sem <- struct{}{} // Wait for an open spot
+		go func(addr string) {
+			checkProxy(addr, definedTimout)
+			<-sem // Signal we're done
+		}(proxyAddr)
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -51,6 +67,14 @@ func main() {
 	time.Sleep(definedTimout * 4)
 
 	fmt.Println("[ Found " + fmt.Sprint(numProxies) + " Proxies ]!")
+}
+
+// Debug
+func countRoutines() {
+	for {
+		fmt.Println("[ Running Routines ]: " + fmt.Sprint(runtime.NumGoroutine()))
+		time.Sleep(1 * time.Second)
+	}
 }
 
 func checkProxy(proxyAddr string, proxyTimeout time.Duration) {
