@@ -12,7 +12,7 @@ import (
 
 var (
 	mutex         sync.Mutex
-	proxies       = []proxy.PROXY{}
+	numProxies    int
 	definedTimout time.Duration
 	definedOutput string
 )
@@ -50,17 +50,10 @@ func main() {
 
 	time.Sleep(definedTimout * 4)
 
-	fmt.Println("[ Found Proxies ]:")
-	for _, proxyObj := range proxies {
-		fmt.Println("[+] " + proxyObj.IP + " ( " + proxyObj.Type + " )")
-		writeToFile(definedOutput, proxyObj.IP)
-		writeToFile(definedOutput+"_"+proxyObj.Type+".txt", proxyObj.IP)
-	}
+	fmt.Println("[ Found " + fmt.Sprint(numProxies) + " Proxies ]!")
 }
 
 func checkProxy(proxyAddr string, proxyTimeout time.Duration) {
-	fmt.Println("[ Checking ]: " + proxyAddr)
-
 	respHTTP, errHTTP := proxy.ConnectHTTP(proxyAddr, proxyTimeout)
 	if errHTTP == nil {
 		if proxy.ValidateResponse(respHTTP) {
@@ -88,13 +81,10 @@ func checkProxy(proxyAddr string, proxyTimeout time.Duration) {
 }
 
 func addProxyToList(proxyAddr string, proxyType string) {
-	proxyObj := proxy.PROXY{
-		IP:   proxyAddr,
-		Type: proxyType,
-	}
-
+	// Ensure only 1 access at a time
 	mutex.Lock()
-	proxies = append(proxies, proxyObj)
+	writeToFile(definedOutput+".txt", proxyAddr)
+	writeToFile(definedOutput+"_"+proxyType+".txt", proxyAddr)
 	mutex.Unlock()
 }
 
@@ -107,4 +97,5 @@ func writeToFile(fName string, str string) {
 	if err != nil {
 		fmt.Println("[ Error ]: " + err.Error())
 	}
+	defer logger.Close()
 }
