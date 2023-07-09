@@ -5,14 +5,16 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"runtime"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
 var (
 	sem           chan struct{}
+	checking      int32
+	caughtUp      bool
 	mutex         sync.Mutex
 	numProxies    int
 	definedTimout time.Duration
@@ -29,8 +31,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Debug
-	//go countRoutines()
+	go stats()
 
 	tTimeout, timeoutErr := strconv.Atoi(sArgs[1])
 	if timeoutErr != nil {
@@ -52,28 +53,36 @@ func main() {
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
+		caughtUp = false
 		proxyAddr := scanner.Text()
 		sem <- struct{}{} // Wait for an open spot
 		go func(addr string) {
+			atomic.AddInt32(&checking, 1)
 			checkProxy(addr, definedTimout)
 			<-sem // Signal we're done
+			atomic.AddInt32(&checking, -1)
 		}(proxyAddr)
 	}
+
+	caughtUp = true
 
 	if err := scanner.Err(); err != nil {
 		fmt.Fprintln(os.Stderr, "Error reading input:", err)
 	}
 
-	time.Sleep(definedTimout * 4)
+	time.Sleep(1 * time.Second)
+	for checking != 0 {
+		time.Sleep(1 * time.Second)
+	}
 
 	fmt.Println("[ Found " + fmt.Sprint(numProxies) + " Proxies ]!")
 }
 
 // Debug
-func countRoutines() {
+func stats() {
 	for {
-		fmt.Println("[ Running Routines ]: " + fmt.Sprint(runtime.NumGoroutine()))
-		time.Sleep(1 * time.Second)
+		fmt.Println("[ Proxies Found ]: " + fmt.Sprint(numProxies) + " [ HTTP ]: " + fmt.Sprint(proxy.HTTP_FOUND) + " [ HTTPS ]: " + fmt.Sprint(proxy.HTTPS_FOUND) + " [ SOCKS4 ]: " + fmt.Sprint(proxy.SOCKS4_FOUND) + " [ SOCKS5 ]: " + fmt.Sprint(proxy.SOCKS5_FOUND) + " [ Checking ]: " + fmt.Sprint(checking) + " [ Caught Up ]: " + fmt.Sprint(caughtUp))
+		time.Sleep(1 * time.Minute)
 	}
 }
 
@@ -113,6 +122,22 @@ func checkProxy(proxyAddr string, proxyTimeout time.Duration) {
 }
 
 func addProxyToList(proxyAddr string, proxyType string) {
+
+	switch proxyType {
+	case proxy.PROXY_HTTP:
+		atomic.AddInt32(&proxy.HTTP_FOUND, 1)
+		break
+	case proxy.PROXY_HTTPS:
+		atomic.AddInt32(&proxy.HTTPS_FOUND, 1)
+		break
+	case proxy.PROXY_SOCKS4:
+		atomic.AddInt32(&proxy.SOCKS4_FOUND, 1)
+		break
+	case proxy.PROXY_SOCKS5:
+		atomic.AddInt32(&proxy.SOCKS5_FOUND, 1)
+		break
+	}
+
 	// Ensure only 1 access at a time
 	mutex.Lock()
 	numProxies++
