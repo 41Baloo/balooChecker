@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"sync/atomic"
 	"time"
 
 	"h12.io/socks"
@@ -14,9 +15,14 @@ import (
 func ValidateResponse(resp []byte) bool {
 	strResp := string(resp)
 	if len(strResp) < 60 {
+		atomic.AddInt32(&FAKE_FOUND, 1)
 		return false
 	}
-	return (strResp[41:55] == "Example Domain")
+	if strResp[41:55] == "Example Domain" {
+		return true
+	}
+	atomic.AddInt32(&FAKE_FOUND, 1)
+	return false
 }
 
 func sendRequest(client *http.Client) ([]byte, error) {

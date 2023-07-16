@@ -76,14 +76,18 @@ func main() {
 	}
 
 	fmt.Println("[ Found " + fmt.Sprint(numProxies) + " Proxies ]!")
+	displayStats()
 }
 
-// Debug
 func stats() {
 	for {
-		fmt.Println("[ Proxies Found ]: " + fmt.Sprint(numProxies) + " [ HTTP ]: " + fmt.Sprint(proxy.HTTP_FOUND) + " [ HTTPS ]: " + fmt.Sprint(proxy.HTTPS_FOUND) + " [ SOCKS4 ]: " + fmt.Sprint(proxy.SOCKS4_FOUND) + " [ SOCKS5 ]: " + fmt.Sprint(proxy.SOCKS5_FOUND) + " [ Checking ]: " + fmt.Sprint(checking) + " [ Caught Up ]: " + fmt.Sprint(caughtUp))
+		displayStats()
 		time.Sleep(1 * time.Minute)
 	}
+}
+
+func displayStats() {
+	fmt.Println("[ Proxies Found ]: " + fmt.Sprint(numProxies) + " [ HTTP ]: " + fmt.Sprint(proxy.HTTP_FOUND) + " [ HTTPS ]: " + fmt.Sprint(proxy.HTTPS_FOUND) + " [ SOCKS4 ]: " + fmt.Sprint(proxy.SOCKS4_FOUND) + " [ SOCKS5 ]: " + fmt.Sprint(proxy.SOCKS5_FOUND) + " [ Fake ]: " + fmt.Sprint(proxy.FAKE_FOUND) + " [ Checking ]: " + fmt.Sprint(checking) + " [ Caught Up ]: " + fmt.Sprint(caughtUp))
 }
 
 func checkProxy(proxyAddr string, proxyTimeout time.Duration) {
@@ -126,16 +130,12 @@ func addProxyToList(proxyAddr string, proxyType string) {
 	switch proxyType {
 	case proxy.PROXY_HTTP:
 		atomic.AddInt32(&proxy.HTTP_FOUND, 1)
-		break
 	case proxy.PROXY_HTTPS:
 		atomic.AddInt32(&proxy.HTTPS_FOUND, 1)
-		break
 	case proxy.PROXY_SOCKS4:
 		atomic.AddInt32(&proxy.SOCKS4_FOUND, 1)
-		break
 	case proxy.PROXY_SOCKS5:
 		atomic.AddInt32(&proxy.SOCKS5_FOUND, 1)
-		break
 	}
 
 	// Ensure only 1 access at a time

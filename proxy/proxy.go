@@ -12,4 +12,6 @@ var (
 	HTTPS_FOUND  int32
 	SOCKS4_FOUND int32
 	SOCKS5_FOUND int32
+
+	FAKE_FOUND int32
 )
